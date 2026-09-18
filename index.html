@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow, noarchive">
 <meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#F3F2ED" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0F1614" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8D%B8%3C/text%3E%3C/svg%3E">
 <style>html{color-scheme:light dark}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
 <title>을지로 애프터 다크</title>
@@ -160,8 +162,32 @@ dialog::backdrop{background:rgba(10,14,12,.6);backdrop-filter:blur(4px)}
 
 footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--line);font-size:12px;color:var(--ink-3);display:grid;gap:4px}
 
+.map-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:var(--radius)}
+.map-hint{display:none;font-size:12px;color:var(--ink-3);margin:6px 0 0}
 @media (max-width:860px){ .panel{grid-template-columns:1fr} .legend{order:2} .hero{grid-template-columns:1fr} .sheet-body{grid-template-columns:1fr} }
-@media (max-width:520px){ .stat{min-width:0;flex:1 1 40%} .search{max-width:none;flex-basis:100%} .sheet-head h2{font-size:22px} }
+@media (max-width:640px){
+  body{padding-inline:14px;-webkit-tap-highlight-color:transparent}
+  .hero{padding-block:22px 12px}
+  .controls .wrap{gap:8px}
+  .chips{flex-wrap:nowrap;overflow-x:auto;width:100%;padding-bottom:2px;scrollbar-width:none} .chips::-webkit-scrollbar{display:none} .chip{flex:0 0 auto;padding:8px 13px}
+  .toggle{padding:8px 12px}
+  .search{max-width:none;flex-basis:100%}
+  .map{width:820px;max-width:none} .map-hint{display:block}
+  .pin{width:30px;height:30px;font-size:12.5px}
+  .legend ol{grid-template-columns:1fr 1fr} .legend li{padding:6px 4px}
+  .stat{min-width:0;flex:1 1 40%}
+  .btn{padding:10px 12px;min-height:42px}
+  .card .foot{flex-wrap:wrap}
+  dialog{max-width:100vw;width:100vw;height:100%;max-height:100%;margin:0}
+  .sheet{border-radius:0;max-height:100%;height:100%}
+  .sheet-head{padding:14px 16px 8px;position:sticky;top:0;background:var(--paper-2);z-index:2;border-bottom:1px solid var(--line)}
+  .sheet-head h2{font-size:22px}
+  .sheet-body{padding:12px 16px 32px}
+  .gallery{display:flex;overflow-x:auto;aspect-ratio:auto;gap:8px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch}
+  .gallery img{flex:0 0 86%;aspect-ratio:4/3;height:auto;scroll-snap-align:start}
+  .gallery img:first-child{grid-row:auto}
+  .links .btn{flex:1 1 45%;justify-content:center}
+}
 @media (prefers-reduced-motion:reduce){ *{transition:none!important} .card:hover{transform:none} }
 </style>
 
@@ -193,11 +219,14 @@ footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--line);font-si
           <button class="tab" role="tab" id="tabClose" aria-selected="false">을지로3가 확대</button>
         </div>
       </div>
-      <div class="map" id="map">
-        <img id="mapImg" src="img/map_wide.jpg" alt="지도">
-        <div id="pins"></div>
-        <span class="attr">© OpenStreetMap contributors</span>
+      <div class="map-scroll" id="mapScroll">
+        <div class="map" id="map">
+          <img id="mapImg" src="img/map_wide.jpg" alt="지도">
+          <div id="pins"></div>
+          <span class="attr">© OpenStreetMap contributors</span>
+        </div>
       </div>
+      <p class="map-hint">지도는 좌우로 밀어서 볼 수 있고, 번호를 누르면 사진과 영업시간이 열립니다.</p>
     </div>
     <aside class="legend" id="legend"></aside>
   </section>
@@ -223,9 +252,11 @@ footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--line);font-si
   const CAT = {cocktail:["칵테일 바","--c-cocktail"],music:["음악·LP 바","--c-music"],wine:["와인 바","--c-wine"],pub:["펍·힙 스팟","--c-pub"],yajang:["야장","--c-yajang"]};
   const DAYS = ["월","화","수","목","금","토","일"];
   const state = {cat:"all", inside:false, open:false, q:"", view:"wide"};
-  try{ const s=JSON.parse(localStorage.getItem("ead-state")||"{}"); Object.assign(state, s); }catch(e){}
+  let saved={}; try{ saved=JSON.parse(localStorage.getItem("ead-state")||"{}"); Object.assign(state, saved); }catch(e){}
+  if(!saved.view && window.matchMedia && window.matchMedia("(max-width:640px)").matches) state.view="close";
   const $ = s=>document.querySelector(s);
   const esc = s=>String(s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const igUrl = p=> p.ig ? (p.ig.startsWith("http")?p.ig:`https://www.instagram.com/${p.ig.replace(/^@/,"")}/`) : null;
 
   // ── 영업시간 판정 ─────────────────────────────
   function parseRange(s){
@@ -278,6 +309,7 @@ footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--line);font-si
   // ── 렌더: 지도 ──────────────────────────────
   function renderMap(){
     const v=state.view; $("#mapImg").src = v==="wide"?"img/map_wide.jpg":"img/map_close.jpg";
+    requestAnimationFrame(()=>{ const sc=$("#mapScroll"); if(sc && sc.scrollWidth>sc.clientWidth) sc.scrollLeft=(sc.scrollWidth-sc.clientWidth)/2; });
     $("#mapTitle").textContent = v==="wide"?"전체 위치 — 서촌·광화문·익선동·종로까지":"을지로3가역 골목 확대 — 도보 5분";
     $("#tabWide").setAttribute("aria-selected",v==="wide"); $("#tabClose").setAttribute("aria-selected",v!=="wide");
     const inFrame = P.filter(p=>p.pins[v].in);
@@ -315,7 +347,7 @@ footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--line);font-si
         <p class="meta"><span class="t">오늘</span><span>${esc(p.hours[DAYS[di]]||"미확인")}${p.hours.last_order?" · L.O. "+esc(p.hours.last_order):""}</span></p>
         <p class="meta"><span class="t">주소</span><span>${esc(p.addr)}</span></p>
         ${flags?`<div class="flags">${flags}</div>`:""}
-        <div class="foot"><button class="btn primary" data-open="${p.id}">사진·영업시간·지도</button>${p.naver?`<a class="btn" href="${p.naver}" target="_blank" rel="noopener">네이버</a>`:""}</div>
+        <div class="foot"><button class="btn primary" data-open="${p.id}">사진·영업시간·지도</button>${igUrl(p)?`<a class="btn" href="${igUrl(p)}" target="_blank" rel="noopener">인스타그램</a>`:""}${p.site?`<a class="btn" href="${p.site}" target="_blank" rel="noopener">홈페이지</a>`:""}${p.naver?`<a class="btn" href="${p.naver}" target="_blank" rel="noopener">네이버</a>`:""}</div>
       </div></article>`; }).join("") + `<div class="empty" id="empty" hidden>조건에 맞는 곳이 없습니다. 필터를 풀어 보세요.</div>`;
   $("#grid").addEventListener("click",e=>{ const b=e.target.closest("[data-open]"); if(b) openDetail(b.dataset.open); });
 
@@ -330,7 +362,7 @@ footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--line);font-si
     const p=P.find(x=>x.id===id); if(!p) return;
     const rows = DAYS.map((d,i)=>`<tr class="${i===di?"today":""}"><td>${d}</td><td>${esc(p.hours[d]||"—")}</td></tr>`).join("");
     const extra = [p.hours["휴무"]?`휴무 ${esc(p.hours["휴무"])}`:"", p.hours.last_order?`라스트오더 ${esc(p.hours.last_order)}`:"", p.hours.note?esc(p.hours.note):""].filter(Boolean).join(" · ");
-    const ig = p.ig ? (p.ig.startsWith("http")?p.ig:`https://www.instagram.com/${p.ig.replace(/^@/,"")}/`) : null;
+    const ig = igUrl(p);
     $("#sheet").innerHTML = `
       <div class="sheet-head"><div><h2>${esc(p.name)}<small>${esc(p.en)}</small></h2><p class="type">${esc(p.type)} · <span class="status ${p.st.k}">${esc(p.st.t)}</span></p></div><button class="close" id="dlgClose" aria-label="닫기">×</button></div>
       <div class="sheet-body">
@@ -349,7 +381,7 @@ footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--line);font-si
           <h4>위치</h4>
           <div class="dmap"><img src="${p.map}" alt="${esc(p.name)} 위치 지도"></div>
           <p style="margin-top:8px">${esc(p.addr)}${p.jibun?`<br><span style="color:var(--ink-3);font-size:12.5px">${esc(p.jibun)}</span>`:""}</p>
-          <div class="links">${p.naver?`<a class="btn" href="${p.naver}" target="_blank" rel="noopener">네이버 플레이스</a>`:""}${ig?`<a class="btn" href="${ig}" target="_blank" rel="noopener">인스타그램</a>`:""}<a class="btn" href="https://map.naver.com/p/search/${encodeURIComponent(p.name.split(" (")[0]+" "+p.addr.split(",")[0])}" target="_blank" rel="noopener">네이버 지도에서 열기</a></div>
+          <div class="links">${ig?`<a class="btn primary" href="${ig}" target="_blank" rel="noopener">인스타그램</a>`:""}${p.site?`<a class="btn" href="${p.site}" target="_blank" rel="noopener">공식 홈페이지</a>`:""}${p.book?`<a class="btn" href="${p.book}" target="_blank" rel="noopener">캐치테이블 예약</a>`:""}${p.naver?`<a class="btn" href="${p.naver}" target="_blank" rel="noopener">네이버 플레이스</a>`:""}<a class="btn" href="https://map.naver.com/p/search/${encodeURIComponent(p.name.split(" (")[0]+" "+p.addr.split(",")[0])}" target="_blank" rel="noopener">네이버 지도에서 열기</a></div>
         </div>
       </div>`;
     $("#dlgClose").addEventListener("click",()=>dlg.close());
