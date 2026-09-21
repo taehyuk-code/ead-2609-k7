@@ -254,8 +254,8 @@ footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--line);font-si
   <header class="hero">
     <div>
       <div class="eyebrow">Euljiro After Dark · 2026.09</div>
-      <h1>을지로 힙한 바 14곳 &amp; 야장 3곳</h1>
-      <p class="lede">칵테일·음악·와인·펍·야장. 가게마다 사진 3장, 위치, 요일별 영업시간을 모았고 지금 이 시간에 열려 있는지 바로 보이게 했습니다. 을지로3가역 골목 8곳이 핵심이고 나머지는 서촌·광화문·익선동·종로로 택시 10분 거리입니다.</p>
+      <h1 id="h1">을지로 힙한 바 &amp; 야장</h1>
+      <p class="lede" id="lede">칵테일·음악·와인·펍·야장. 가게마다 사진 3장, 위치, 요일별 영업시간을 모았고 지금 이 시간에 열려 있는지 바로 보이게 했습니다.</p>
     </div>
     <div class="stats" id="stats"></div>
   </header>
@@ -354,6 +354,9 @@ footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--line);font-si
 
   // ── 렌더: 통계·칩 ────────────────────────────
   const openN = P.filter(p=>p.st.k==="open").length, inN = P.filter(p=>!p.outside).length, warnN = P.filter(p=>p.warn).length;
+  const yjN = P.filter(p=>p.cat==="yajang").length;
+  $("#h1").textContent = `을지로 힙한 바 ${P.length-yjN}곳 & 야장 ${yjN}곳`;
+  $("#lede").textContent += ` 을지로3가역 골목 ${inN}곳이 핵심이고 나머지는 서촌·광화문·익선동·종로로 택시 10분 거리입니다.`;
   $("#stats").innerHTML = `<div class="stat open"><b>${openN}</b><span>지금 영업 중</span></div><div class="stat"><b>${inN}</b><span>을지로3가 골목</span></div><div class="stat"><b>${P.length-inN}</b><span>택시 10분 거리</span></div><div class="stat"><b>${warnN}</b><span>확인 필요 (이전·야장 없음)</span></div>`;
   const chips = [["all","전체",P.length], ...Object.keys(CAT).map(k=>[k,CAT[k][0],P.filter(p=>p.cat===k).length])];
   $("#chips").innerHTML = chips.map(([k,l,n])=>`<button class="chip" data-cat="${k}" aria-pressed="${state.cat===k}" style="--cc:var(${CAT[k]?CAT[k][1]:"--ink-3"})">${k!=="all"?'<span class="dot"></span>':""}${l}<small>${n}</small></button>`).join("")
